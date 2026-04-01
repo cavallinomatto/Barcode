@@ -38,6 +38,12 @@ export default function App() {
   const [config, setConfig] = useState<BarcodeConfig>(DEFAULT_CONFIG);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Check if the app is being embedded (e.g., in an iframe)
+  const isEmbedded = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("embed") === "true";
+  }, []);
+
   const addItem = () => {
     const newItem: BarcodeItem = {
       id: Math.random().toString(36).substr(2, 9),
@@ -155,47 +161,49 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#212529] font-sans pb-20">
+    <div className={cn("min-h-screen bg-[#F8F9FA] text-[#212529] font-sans", !isEmbedded ? "pb-20" : "pb-6")}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-4">
-          <img 
-            src="http://www.cavallinomatto.it/wp-content/uploads/2025/09/Risorsa1300x-scaled.png" 
-            alt="Cavallino Matto" 
-            className="h-10 w-auto object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://www.cavallinomatto.it/wp-content/uploads/2021/03/logo-cavallino-matto.png";
-            }}
-            referrerPolicy="no-referrer"
-          />
-          <div className="h-8 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Genera il tuo Barcode</h1>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Generatore di barcode ean-13 per negozi del Parco</p>
+      {!isEmbedded && (
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-4">
+            <img 
+              src="http://www.cavallinomatto.it/wp-content/uploads/2025/09/Risorsa1300x-scaled.png" 
+              alt="Cavallino Matto" 
+              className="h-10 w-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://www.cavallinomatto.it/wp-content/uploads/2021/03/logo-cavallino-matto.png";
+              }}
+              referrerPolicy="no-referrer"
+            />
+            <div className="h-8 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Genera il tuo Barcode</h1>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Generatore di barcode ean-13 per negozi del Parco</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleDownloadPDF}
-            disabled={isGenerating || !allItemsValid || totalQuantity === 0}
-            className={cn(
-              "flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all shadow-sm",
-              (!allItemsValid || totalQuantity === 0)
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-            )}
-          >
-            {isGenerating ? (
-              <RefreshCw size={18} className="animate-spin" />
-            ) : (
-              <Download size={18} />
-            )}
-            Scarica PDF A4 ({totalQuantity})
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isGenerating || !allItemsValid || totalQuantity === 0}
+              className={cn(
+                "flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all shadow-sm",
+                (!allItemsValid || totalQuantity === 0)
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                  : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+              )}
+            >
+              {isGenerating ? (
+                <RefreshCw size={18} className="animate-spin" />
+              ) : (
+                <Download size={18} />
+              )}
+              Scarica PDF A4 ({totalQuantity})
+            </button>
+          </div>
+        </header>
+      )}
 
-      <main className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className={cn("max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8", isEmbedded && "pt-4")}>
         {/* Sidebar Controls */}
         <div className="lg:col-span-5 space-y-6">
           <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
@@ -204,13 +212,30 @@ export default function App() {
                 <BarcodeIcon size={20} />
                 <h2 className="font-bold text-lg">Articoli</h2>
               </div>
-              <button 
-                onClick={addItem}
-                className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                <PlusCircle size={16} />
-                AGGIUNGI ALTRO
-              </button>
+              <div className="flex items-center gap-3">
+                {isEmbedded && (
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={isGenerating || !allItemsValid || totalQuantity === 0}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                      (!allItemsValid || totalQuantity === 0)
+                        ? "bg-gray-100 text-gray-400" 
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    )}
+                  >
+                    {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                    PDF
+                  </button>
+                )}
+                <button 
+                  onClick={addItem}
+                  className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  <PlusCircle size={16} />
+                  AGGIUNGI
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -412,21 +437,23 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 py-4 px-6 flex items-center justify-center gap-4 z-20">
-        <p className="text-sm font-medium text-gray-600">App creata da</p>
-        <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full border border-gray-200">
-          <img 
-            src="http://www.cavallinomatto.it/wp-content/uploads/2025/09/Risorsa1300x-scaled.png" 
-            alt="Cavallino Matto" 
-            className="h-8 w-auto object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://www.cavallinomatto.it/wp-content/uploads/2021/03/logo-cavallino-matto.png";
-            }}
-            referrerPolicy="no-referrer"
-          />
-        </div>
-        <p className="text-sm font-bold text-blue-600">| Andrea</p>
-      </footer>
+      {!isEmbedded && (
+        <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 py-4 px-6 flex items-center justify-center gap-4 z-20">
+          <p className="text-sm font-medium text-gray-600">App creata da</p>
+          <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full border border-gray-200">
+            <img 
+              src="http://www.cavallinomatto.it/wp-content/uploads/2025/09/Risorsa1300x-scaled.png" 
+              alt="Cavallino Matto" 
+              className="h-8 w-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://www.cavallinomatto.it/wp-content/uploads/2021/03/logo-cavallino-matto.png";
+              }}
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <p className="text-sm font-bold text-blue-600">| Andrea</p>
+        </footer>
+      )}
     </div>
   );
 }

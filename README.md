@@ -1,20 +1,26 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Barcode Generator - Cavallino Matto
 
-# Run and deploy your AI Studio app
+Applicazione per la generazione di codici a barre EAN-13 ottimizzati per la stampa su fogli A4.
 
-This contains everything you need to run your app locally.
+## Funzionalità
+- Generazione codici a barre EAN-13 con calcolo automatico del checksum.
+- Layout personalizzabile (colonne, righe, dimensioni etichetta).
+- Esportazione in PDF ad alta risoluzione (300 DPI).
+- Modalità "Embed" per l'inserimento in backoffice aziendali (aggiungi `?embed=true` all'URL).
 
-View your app in AI Studio: https://ai.studio/apps/f93d6023-8d34-43f5-83b6-ec7b304ee084
+## Sviluppo Locale
+1. Installa le dipendenze: `npm install`
+2. Avvia il server di sviluppo: `npm run dev`
+3. Apri `http://localhost:3000`
 
-## Run Locally
+## Distribuzione su Vercel
+L'applicazione è configurata per funzionare su Vercel come applicazione full-stack.
+1. Collega il tuo repository GitHub a Vercel.
+2. Vercel rileverà automaticamente la configurazione `vercel.json`.
+3. Assicurati che il comando di build sia `npm run build` e la directory di output sia `dist`.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Integrazione Iframe
+Per inserire l'app in un altro sito senza header e footer:
+```html
+<iframe src="https://tuo-url.vercel.app?embed=true" width="100%" height="800px"></iframe>
+```
