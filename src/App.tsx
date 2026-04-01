@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { jsPDF } from "jspdf";
-import { Printer, Download, Plus, Minus, RefreshCw, Barcode as BarcodeIcon, Settings2, Trash2, PlusCircle } from "lucide-react";
+import bwipjs from "bwip-js";
+import { Printer, Download, Plus, Minus, RefreshCw, Barcode as BarcodeIcon, Settings2, Trash2, PlusCircle, AlertTriangle } from "lucide-react";
 import { cn } from "./lib/utils";
 import { DEFAULT_CONFIG, type BarcodeConfig, type BarcodeItem } from "./types";
 
@@ -32,6 +33,48 @@ const isChecksumCorrect = (code: string): boolean => {
   if (full.length !== 13) return false;
   const base = full.slice(0, 12);
   return calculateEAN13Checksum(base) === full[12];
+};
+
+const BarcodePreview = ({ fullCode }: { fullCode: string }) => {
+  const [imgSrc, setImgSrc] = useState<string>("");
+
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      bwipjs.toCanvas(canvas, {
+        bcid: 'ean13',
+        text: fullCode,
+        scale: 3,
+        height: 10,
+        includetext: true,
+        textxalign: 'center',
+        textsize: 10,
+        paddingtop: 2,
+        paddingbottom: 2,
+        paddingleft: 2,
+        paddingright: 2,
+      });
+      setImgSrc(canvas.toDataURL('image/png'));
+    } catch (e) {
+      console.error("Preview generation failed:", e);
+      // Fallback to external API for preview if client-side fails
+      setImgSrc(`https://barcode.tec-it.com/barcode.ashx?data=${fullCode}&code=EAN13&translate-esc=on&imagetype=png&dpi=300`);
+    }
+  }, [fullCode]);
+
+  if (!imgSrc) return <div className="animate-pulse bg-gray-100 w-full h-12 rounded" />;
+
+  return (
+    <>
+      <img 
+        src={imgSrc} 
+        alt="Barcode" 
+        className="w-full h-auto max-h-[70%]"
+        referrerPolicy="no-referrer"
+      />
+      <span className="text-[8px] font-mono mt-1">{fullCode}</span>
+    </>
+  );
 };
 
 export default function App() {
@@ -84,44 +127,59 @@ export default function App() {
 
       const { labelWidth, labelHeight, columns, rows, marginTop, marginLeft } = config;
       
-      // Cache for base64 images to avoid redundant fetches
+      // Cache for base64 images to avoid redundant generation
       const imageCache: Record<string, string> = {};
 
       let currentCount = 0;
-      let page = 1;
       let itemIndex = 0;
       let itemQuantityRemaining = config.items[0]?.quantity || 0;
 
       while (itemIndex < config.items.length) {
         if (currentCount > 0 && currentCount % (columns * rows) === 0) {
           doc.addPage();
-          page++;
         }
 
         const currentItem = config.items[itemIndex];
         const fullCode = getFullCode(currentItem.code);
         
         if (!imageCache[fullCode]) {
-          const proxyUrl = `${window.location.origin}/api/barcode?data=${fullCode}&code=EAN13`;
-          console.log(`Fetching barcode from: ${proxyUrl}`);
-          const response = await fetch(proxyUrl);
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch barcode ${fullCode}: ${response.status} ${errorText}`);
+          try {
+            // Generate barcode client-side using bwip-js
+            const canvas = document.createElement('canvas');
+            bwipjs.toCanvas(canvas, {
+              bcid: 'ean13',
+              text: fullCode,
+              scale: 3,
+              height: 10,
+              includetext: true,
+              textxalign: 'center',
+              textsize: 10,
+              paddingtop: 2,
+              paddingbottom: 2,
+              paddingleft: 2,
+              paddingright: 2,
+            });
+            imageCache[fullCode] = canvas.toDataURL('image/png');
+          } catch (e: any) {
+            console.error(`Error generating barcode for ${fullCode}:`, e);
+            // Fallback to proxy if client-side fails for any reason
+            const proxyUrl = `${window.location.origin}/api/barcode?data=${fullCode}&code=EAN13`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Failed to fetch barcode ${fullCode}: ${response.status} ${errorText}`);
+            }
+            const blob = await response.blob();
+            imageCache[fullCode] = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
           }
-          const blob = await response.blob();
-          imageCache[fullCode] = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
         }
 
         const base64 = imageCache[fullCode];
-        
-        // Detect format from data URL (e.g., "data:image/png;base64,..." -> "PNG")
-        const formatMatch = base64.match(/^data:image\/(\w+);base64,/);
-        const format = (formatMatch ? formatMatch[1].toUpperCase() : "PNG") as any;
+        const format = "PNG";
         
         // Calculate position on current page
         const posOnPage = currentCount % (columns * rows);
@@ -410,15 +468,7 @@ export default function App() {
                         style={{ width: `${config.labelWidth}mm`, height: `${config.labelHeight}mm` }}
                       >
                         {valid ? (
-                          <>
-                            <img 
-                              src={`https://barcode.tec-it.com/barcode.ashx?data=${full}&code=EAN13&translate-esc=on&imagetype=png&dpi=300`} 
-                              alt="Barcode" 
-                              className="w-full h-auto max-h-[70%]"
-                              referrerPolicy="no-referrer"
-                            />
-                            <span className="text-[8px] font-mono mt-1">{full}</span>
-                          </>
+                          <BarcodePreview fullCode={full} />
                         ) : (
                           <div className="w-full h-full bg-gray-50 flex items-center justify-center border border-dashed border-gray-200">
                              <span className="text-[8px] text-gray-300">Codice non valido</span>
