@@ -1,5 +1,5 @@
 {
-  "name": "EAN-13 Barcode Studio",
-  "description": "Generate EAN-13 barcodes and layout them on A4 sheets for printing.",
+  "name": "Genera il tuo barcode",
+  "description": "Generatore di barcode EAN-13 per i negozi del Parco Cavallino Matto.",
   "requestFramePermissions": []
 }
