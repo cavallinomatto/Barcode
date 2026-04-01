@@ -8,6 +8,14 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Middleware to allow iframe embedding
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "frame-ancestors *");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.removeHeader("X-Frame-Options");
+  next();
+});
+
 // API routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
