@@ -8,11 +8,17 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Middleware to allow iframe embedding
+// Middleware to allow iframe embedding and handle CORS
 app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", "frame-ancestors *");
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.removeHeader("X-Frame-Options");
+  
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
   next();
 });
 
@@ -27,10 +33,14 @@ app.get("/api/barcode", async (req, res) => {
   if (!data) return res.status(400).send("Missing data");
   
   // Force imagetype=png for jsPDF compatibility and set DPI to 300 for high quality
-  const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${data}&code=${code || 'EAN13'}&translate-esc=on&imagetype=png&dpi=300`;
+  const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(data as string)}&code=${encodeURIComponent((code || 'EAN13') as string)}&translate-esc=on&imagetype=png&dpi=300`;
   
   try {
-    const response = await fetch(barcodeUrl);
+    const response = await fetch(barcodeUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
     const contentType = response.headers.get("content-type");
     
     if (!response.ok) {

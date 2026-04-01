@@ -102,9 +102,13 @@ export default function App() {
         const fullCode = getFullCode(currentItem.code);
         
         if (!imageCache[fullCode]) {
-          const proxyUrl = `/api/barcode?data=${fullCode}&code=EAN13`;
+          const proxyUrl = `${window.location.origin}/api/barcode?data=${fullCode}&code=EAN13`;
+          console.log(`Fetching barcode from: ${proxyUrl}`);
           const response = await fetch(proxyUrl);
-          if (!response.ok) throw new Error(`Failed to fetch barcode ${fullCode}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch barcode ${fullCode}: ${response.status} ${errorText}`);
+          }
           const blob = await response.blob();
           imageCache[fullCode] = await new Promise<string>((resolve) => {
             const reader = new FileReader();
@@ -152,9 +156,9 @@ export default function App() {
       }
 
       doc.save(`barcodes-batch.pdf`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating PDF:", error);
-      alert("Errore durante la generazione del PDF. Riprova.");
+      alert(`Errore durante la generazione del PDF: ${error.message || 'Errore sconosciuto'}. Riprova.`);
     } finally {
       setIsGenerating(false);
     }
